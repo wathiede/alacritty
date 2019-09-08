@@ -308,21 +308,21 @@ impl Action {
             Action::Esc(ref s) => {
                 ctx.scroll(Scroll::Bottom);
                 ctx.write_to_pty(s.clone().into_bytes())
-            },
+            }
             Action::Copy => {
                 ctx.copy_selection(ClipboardType::Clipboard);
-            },
+            }
             Action::Paste => {
                 let text = ctx.terminal_mut().clipboard().load(ClipboardType::Clipboard);
                 self.paste(ctx, &text);
-            },
+            }
             Action::PasteSelection => {
                 // Only paste if mouse events are not captured by an application
                 if !mouse_mode {
                     let text = ctx.terminal_mut().clipboard().load(ClipboardType::Selection);
                     self.paste(ctx, &text);
                 }
-            },
+            }
             Action::Command(ref program, ref args) => {
                 trace!("Running command {} with args {:?}", program, args);
 
@@ -330,56 +330,56 @@ impl Action {
                     Ok(_) => debug!("Spawned new proc"),
                     Err(err) => warn!("Couldn't run command {}", err),
                 }
-            },
+            }
             Action::ToggleFullscreen => {
                 ctx.toggle_fullscreen();
-            },
+            }
             #[cfg(target_os = "macos")]
             Action::ToggleSimpleFullscreen => {
                 ctx.toggle_simple_fullscreen();
-            },
+            }
             Action::Hide => {
                 ctx.hide_window();
-            },
+            }
             Action::Quit => {
                 ctx.terminal_mut().exit();
-            },
+            }
             Action::IncreaseFontSize => {
                 ctx.terminal_mut().change_font_size(FONT_SIZE_STEP);
-            },
+            }
             Action::DecreaseFontSize => {
                 ctx.terminal_mut().change_font_size(-FONT_SIZE_STEP);
-            },
+            }
             Action::ResetFontSize => {
                 ctx.terminal_mut().reset_font_size();
-            },
+            }
             Action::ScrollPageUp => {
                 ctx.scroll(Scroll::PageUp);
-            },
+            }
             Action::ScrollPageDown => {
                 ctx.scroll(Scroll::PageDown);
-            },
+            }
             Action::ScrollLineUp => {
                 ctx.scroll(Scroll::Lines(1));
-            },
+            }
             Action::ScrollLineDown => {
                 ctx.scroll(Scroll::Lines(-1));
-            },
+            }
             Action::ScrollToTop => {
                 ctx.scroll(Scroll::Top);
-            },
+            }
             Action::ScrollToBottom => {
                 ctx.scroll(Scroll::Bottom);
-            },
+            }
             Action::ClearHistory => {
                 ctx.terminal_mut().clear_screen(ClearMode::Saved);
-            },
+            }
             Action::ClearLogNotice => {
                 ctx.terminal_mut().message_buffer_mut().pop();
-            },
+            }
             Action::SpawnNewInstance => {
                 ctx.spawn_new_instance();
-            },
+            }
             Action::None => (),
         }
     }
@@ -451,10 +451,22 @@ impl<'a, A: ActionContext + 'a> Processor<'a, A> {
             && self.mouse_config.url.launcher.is_some()
         {
             let buffer_point = self.ctx.terminal().visible_to_buffer(point);
-            if let Some(url) =
-                self.ctx.terminal().urls().drain(..).find(|url| url.contains(buffer_point))
-            {
-                return MouseState::Url(url);
+            if let Some(pat) = &self.mouse_config.url.url_pat {
+                if let Some(url) = self
+                    .ctx
+                    .terminal()
+                    .regex_urls(&pat)
+                    .drain(..)
+                    .find(|url| url.contains(buffer_point))
+                {
+                    return MouseState::Url(url);
+                }
+            } else {
+                if let Some(url) =
+                    self.ctx.terminal().urls().drain(..).find(|url| url.contains(buffer_point))
+                {
+                    return MouseState::Url(url);
+                }
             }
         }
 
@@ -498,11 +510,11 @@ impl<'a, A: ActionContext + 'a> Processor<'a, A> {
             MouseState::Url(url) => {
                 let url_bounds = url.linear_bounds(self.ctx.terminal());
                 self.ctx.terminal_mut().set_url_highlight(url_bounds);
-            },
+            }
             MouseState::MessageBar | MouseState::MessageBarButton => {
                 self.ctx.terminal_mut().reset_url_highlight();
                 return;
-            },
+            }
             _ => self.ctx.terminal_mut().reset_url_highlight(),
         }
 
@@ -668,7 +680,7 @@ impl<'a, A: ActionContext + 'a> Processor<'a, A> {
                 }
 
                 ClickState::Click
-            },
+            }
         };
     }
 
@@ -706,7 +718,12 @@ impl<'a, A: ActionContext + 'a> Processor<'a, A> {
         }
 
         let point = self.ctx.terminal().visible_to_buffer(point);
-        let url = self.ctx.terminal().urls().drain(..).find(|url| url.contains(point))?;
+        //let url = self.ctx.terminal().urls().drain(..).find(|url| url.contains(point))?;
+        let url = if let Some(pat) = &self.mouse_config.url.url_pat {
+            self.ctx.terminal().regex_urls(&pat).drain(..).find(|url| url.contains(point))?
+        } else {
+            self.ctx.terminal().urls().drain(..).find(|url| url.contains(point))?
+        };
         let text = self.ctx.terminal().url_to_string(&url);
 
         let launcher = self.mouse_config.url.launcher.as_ref()?;
@@ -731,19 +748,19 @@ impl<'a, A: ActionContext + 'a> Processor<'a, A> {
             MouseScrollDelta::LineDelta(_columns, lines) => {
                 let new_scroll_px = lines * self.ctx.size_info().cell_height;
                 self.scroll_terminal(modifiers, new_scroll_px as i32);
-            },
+            }
             MouseScrollDelta::PixelDelta(lpos) => {
                 match phase {
                     TouchPhase::Started => {
                         // Reset offset to zero
                         self.ctx.mouse_mut().scroll_px = 0;
-                    },
+                    }
                     TouchPhase::Moved => {
                         self.scroll_terminal(modifiers, lpos.y as i32);
-                    },
+                    }
                     _ => (),
                 }
-            },
+            }
         }
     }
 
@@ -826,7 +843,7 @@ impl<'a, A: ActionContext + 'a> Processor<'a, A> {
                 ElementState::Pressed => {
                     self.process_mouse_bindings(modifiers, button);
                     self.on_mouse_press(button, modifiers, point);
-                },
+                }
                 ElementState::Released => self.on_mouse_release(button, modifiers, point),
             }
         }
@@ -857,7 +874,7 @@ impl<'a, A: ActionContext + 'a> Processor<'a, A> {
                 if self.process_key_bindings(input) {
                     *self.ctx.suppress_chars() = true;
                 }
-            },
+            }
             ElementState::Released => *self.ctx.suppress_chars() = false,
         }
     }
@@ -919,7 +936,7 @@ impl<'a, A: ActionContext + 'a> Processor<'a, A> {
                     } else {
                         false
                     }
-                },
+                }
             };
 
             if is_triggered {
@@ -996,7 +1013,7 @@ impl<'a, A: ActionContext + 'a> Processor<'a, A> {
                 }
 
                 self.ctx.clear_selection();
-            },
+            }
         }
     }
 

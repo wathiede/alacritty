@@ -1,0 +1,12 @@
+[1m[7m%[27m[1m[0m                                                                                                                        [0m[27m[24m[J[01;31m[00m[35m[00m[36m/tmp[00m 
+[37m20:57:35[00m [37mpenguin[00m:% [K[?1h=[?2004hccat /tmp/urls.txt[1m [0m[0m [?1l>[?2004l
+This line has no URLs
+This line has a URL at the end http://example.com
+http://example.com is a line with a URL at the begining
+This line has a URL http://example.com in the middle
+The next line is only a URL
+http://example.com
+This line contains a very long URL that will hopefully cause a wrap https://docs.google.com/document/d/1BKj8HjiN0pXZKicjwBbL1O6eble0cyCv3pQbX6Mbn0U/edit#heading=h.laezms7pzg1x
+This has an internal url bug/1234 for bugs.
+[1m[7m%[27m[1m[0m                                                                                                                        [0m[27m[24m[J[01;31m[00m[35m[00m[36m/tmp[00m 
+[37m20:57:38[00m [37mpenguin[00m:% [K[?1h=[?2004h

@@ -54,6 +54,7 @@ ref_tests! {
     row_reset
     zerowidth
     selective_erasure
+    urls
 }
 
 fn read_u8<P>(path: P) -> Vec<u8>

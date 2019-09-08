@@ -29,6 +29,11 @@ pub struct Url {
     // Modifier used to open links
     #[serde(deserialize_with = "failure_default")]
     modifiers: ModsWrapper,
+
+    // Regex pattern for URLs
+    #[serde(deserialize_with = "failure_default")]
+    pub url_pat: Option<String>,
+    // TODO(wathiede): compile regex at load time and make that public, not the raw string
 }
 
 impl Url {
@@ -58,7 +63,7 @@ where
         Err(err) => {
             error!("Problem with config: {}; using {}", err, default.clone().unwrap().program());
             Ok(default)
-        },
+        }
     }
 }
 
@@ -72,6 +77,7 @@ impl Default for Url {
             #[cfg(windows)]
             launcher: Some(CommandWrapper::Just(String::from("explorer"))),
             modifiers: Default::default(),
+            url_pat: None,
         }
     }
 }
@@ -103,6 +109,6 @@ where
         Err(err) => {
             error!("Problem with config: {}; using default value", err);
             Ok(default_threshold_ms())
-        },
+        }
     }
 }
