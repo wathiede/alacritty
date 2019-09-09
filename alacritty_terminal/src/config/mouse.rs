@@ -1,7 +1,9 @@
 use std::time::Duration;
 
 use glutin::ModifiersState;
+use regex::Regex;
 use serde::{Deserialize, Deserializer};
+use serde_regex;
 
 use crate::config::bindings::{CommandWrapper, ModsWrapper};
 use crate::config::failure_default;
@@ -19,6 +21,22 @@ pub struct Mouse {
     pub url: Url,
 }
 
+/// ComparableRegex wraps regex::Regex and implements traits necessary to be embedded in other
+/// config related datastructures.
+#[derive(Clone, Debug, Deserialize)]
+pub struct ComparableRegex {
+    #[serde(with = "serde_regex")]
+    pub re: Regex,
+}
+
+impl PartialEq for ComparableRegex {
+    fn eq(&self, other: &Self) -> bool {
+        self.re.as_str() == other.re.as_str()
+    }
+}
+
+impl Eq for ComparableRegex {}
+
 #[serde(default)]
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 pub struct Url {
@@ -31,9 +49,7 @@ pub struct Url {
     modifiers: ModsWrapper,
 
     // Regex pattern for URLs
-    #[serde(deserialize_with = "failure_default")]
-    pub url_pat: Option<String>,
-    // TODO(wathiede): compile regex at load time and make that public, not the raw string
+    pub url_pat: Option<ComparableRegex>,
 }
 
 impl Url {

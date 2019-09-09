@@ -14,7 +14,6 @@
 //
 //! Exports the `Term` type which is a high-level API for the Grid
 use std::cmp::{max, min};
-use std::iter::FromIterator;
 use std::ops::{Index, IndexMut, Range, RangeInclusive};
 use std::time::{Duration, Instant};
 use std::{io, mem, ptr};
@@ -1311,24 +1310,22 @@ impl Term {
         &mut self.clipboard
     }
 
-    pub fn regex_urls(&self, url_pat: &str) -> Vec<Url> {
+    pub fn regex_urls(&self, url_pat: &Regex) -> Vec<Url> {
         let num_lines = self.grid.num_lines().0 - 1;
         let grid_start_point = Point::new(num_lines, Column(0));
-        let mut chars = Vec::new();
-        let mut char_to_point = Vec::new();
+        let grid_area = self.grid.num_lines().0 * self.grid.num_cols().0;
+        let mut text = String::with_capacity(grid_area);
+        let mut char_to_point = Vec::with_capacity(grid_area);
 
         // Build String representation of grid, including map to get Points out from regex results.
         let mut iter = self.grid.iter_from(grid_start_point);
         let mut c = Some(iter.cell());
         while let Some(cell) = c {
             char_to_point.push(iter.point());
-            chars.push(cell.c);
+            text.push(cell.c);
             c = iter.next();
         }
-        let text = String::from_iter(&chars);
-        // TODO(wathiede): cache regexp building.
-        Regex::new(url_pat)
-            .unwrap()
+        url_pat
             .find_iter(&text)
             .map(|mat| Url { start: char_to_point[mat.start()], end: char_to_point[mat.end() - 1] })
             .collect()
@@ -2223,6 +2220,7 @@ mod tests {
     use std::path::Path;
 
     use font::Size;
+    use regex::Regex;
     use serde_json;
 
     use crate::ansi::{self, CharsetIndex, Handler, StandardCharset};
@@ -2493,7 +2491,6 @@ mod tests {
 
         let mut term = Term::new(&config, size, MessageBuffer::new(), Clipboard::new_nop());
         mem::swap(&mut term.grid, &mut grid);
-        let url_pat = r"https?://[^\s]+";
         let want = vec![
             Url {
                 start: Point { line: 36, col: Column(68) },
@@ -2518,7 +2515,8 @@ mod tests {
         ];
         let got = term.urls();
         assert_eq!(got, want);
-        let got = term.regex_urls(url_pat);
+        let url_pat = Regex::new(r"https?://[^\s]+").unwrap();
+        let got = term.regex_urls(&url_pat);
         assert_eq!(got, want.into_iter().rev().collect::<Vec<Url>>());
     }
 }
@@ -2532,6 +2530,8 @@ mod benches {
     use std::io::Read;
     use std::mem;
     use std::path::Path;
+
+    use regex::Regex;
 
     use crate::clipboard::Clipboard;
     use crate::config::Config;
@@ -2586,5 +2586,36 @@ mod benches {
                 test::black_box(cell);
             }
         })
+    }
+
+    fn setup_urls_term() -> Term {
+        // Url realistic grid state with URLs in it.
+        let serialized_grid =
+            read_string(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/ref/urls/grid.json"));
+        let serialized_size =
+            read_string(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/ref/urls/size.json"));
+        let serialized_config =
+            read_string(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/ref/urls/config.json"));
+
+        let mut grid: Grid<Cell> = serde_json::from_str(&serialized_grid).unwrap();
+        let size: SizeInfo = serde_json::from_str(&serialized_size).unwrap();
+        let config: Config = serde_json::from_str(&serialized_config).unwrap();
+
+        let mut term = Term::new(&config, size, MessageBuffer::new(), Clipboard::new_nop());
+        mem::swap(&mut term.grid, &mut grid);
+        term
+    }
+
+    #[bench]
+    fn find_urls_regex(b: &mut test::Bencher) {
+        let term = setup_urls_term();
+        let url_pat = Regex::new(r"https?://[^\s]+").unwrap();
+        b.iter(|| term.regex_urls(&url_pat));
+    }
+
+    #[bench]
+    fn find_urls_rfind(b: &mut test::Bencher) {
+        let term = setup_urls_term();
+        b.iter(|| term.urls());
     }
 }

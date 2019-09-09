@@ -455,7 +455,7 @@ impl<'a, A: ActionContext + 'a> Processor<'a, A> {
                 if let Some(url) = self
                     .ctx
                     .terminal()
-                    .regex_urls(&pat)
+                    .regex_urls(&pat.re)
                     .drain(..)
                     .find(|url| url.contains(buffer_point))
                 {
@@ -718,9 +718,8 @@ impl<'a, A: ActionContext + 'a> Processor<'a, A> {
         }
 
         let point = self.ctx.terminal().visible_to_buffer(point);
-        //let url = self.ctx.terminal().urls().drain(..).find(|url| url.contains(point))?;
         let url = if let Some(pat) = &self.mouse_config.url.url_pat {
-            self.ctx.terminal().regex_urls(&pat).drain(..).find(|url| url.contains(point))?
+            self.ctx.terminal().regex_urls(&pat.re).drain(..).find(|url| url.contains(point))?
         } else {
             self.ctx.terminal().urls().drain(..).find(|url| url.contains(point))?
         };

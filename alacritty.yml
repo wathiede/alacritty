@@ -418,6 +418,20 @@ mouse:
     # on them. The available modifiers are documented in the key binding section.
     modifiers: None
 
+    # URL pattern
+    #
+    # If unset, use the builtin rfind_url.Parser, for strict URL detection.
+    # If set, anything matching the pattern will be highlighted as a URL.
+    #
+    # This can be useful if your local environment has DNS search paths that
+    # make short hostnames useful, i.e. bug/#### or pr/#### are valid URLs.
+    #
+    # Note: it is extremely difficult to define a perfect URL matcher in
+    # regex, as https://mathiasbynens.be/demo/url-regex will attest.  This
+    # option is only useful if the added flexibility is worth the loss in
+    # accuracy and speed over the builtin parser. 
+    # url_pat: 'https?://[^\s]|(bug|pr)/[^ ]+'
+
 # Mouse bindings
 #
 # Mouse bindings are specified as a list of objects, much like the key
